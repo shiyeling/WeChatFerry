@@ -9,9 +9,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -64,6 +66,40 @@ import lombok.extern.slf4j.Slf4j;
 public class WeChatDllServiceImpl implements WeChatDllService {
 
     private WeChatSocketClient wechatSocketClient;
+
+//    private WeChatSocketClient wechatSocketClient2;
+    @Resource
+//    private ServerProperties serverProperties;
+//    @PostConstruct
+//    public void init() {
+//        log.info("启动并");
+//        wechatSocketClient2 = new WeChatSocketClient("10.33.10.6", 28001, false);
+//        // 获取数据库
+//        log.info("dbs: {}", wechatSocketClient.getDbNames());
+//        // 使用本机打印
+//        String url = "http://localhost:" + serverProperties.getPort() + "/wechat/msg/receive";
+//        // 接收消息，并调用 printWxMsg 处理
+//        log.info("Message forwarding url: {}", url);
+//        wechatSocketClient.enableRecvMsg(100);
+//        Thread thread = new Thread(new Runnable() {
+//            public void run() {
+//                while (wechatSocketClient.getIsReceivingMsg()) {
+//                    // 只打印
+//                    // wechatSocketClient.printWxMsg(wechatSocketClient.getMsg());
+//                    // 转发到boot项目进行消息处理
+//                    wechatSocketClient.forwardMsg(wechatSocketClient.getMsg(), url);
+//                }
+//            }
+//        });
+//        thread.start();
+//        // client.diableRecvMsg(); // 需要停止时调用
+//
+//        new Thread(new Runnable() {
+//            public void run() {
+//                wechatSocketClient.keepRunning();
+//            }
+//        }).start();
+//    }
 
     @Autowired
     public void setWechatSocketClient(WeChatSocketClient wechatSocketClient) {

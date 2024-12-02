@@ -28,9 +28,9 @@ logging:
 wechat:
   ferry:
     # DLL文件位置
-    dll-path: E:\WeChatFerry\clients\java\wechat-ferry-mvn\dll\sdk.dll
+    dll-path: ./dll/sdk.dll
     # socket端口
-    socket-port: 10086
+    socket-port: 18001
     # 需要开启消息处理的群
     open-msg-groups:
       - 53257911728@chatroom

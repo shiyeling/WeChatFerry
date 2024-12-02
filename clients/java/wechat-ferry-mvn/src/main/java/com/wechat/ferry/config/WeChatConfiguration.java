@@ -28,12 +28,16 @@ public class WeChatConfiguration {
 
     @Bean
     public WeChatSocketClient weChatSocketClient() {
-        log.debug("[读取配置文件]-端口：{}，地址：{}", properties.getSocketPort(), properties.getDllPath());
+        log.info("[读取配置文件]-端口：{}，DLL：{}", properties.getSocketPort(), properties.getDllPath());
         // 连接远程 RPC
         // Client client = new Client("127.0.0.1", 10086);
 
         // 本地启动 RPC
-        WeChatSocketClient wechatSocketClient = new WeChatSocketClient(properties.getSocketPort(), properties.getDllPath());
+        // WeChatSocketClient wechatSocketClient = new WeChatSocketClient(properties.getSocketPort(), properties.getDllPath());
+
+        // 使用远程的RPC
+        WeChatSocketClient wechatSocketClient = new WeChatSocketClient("10.10.1.22", properties.getSocketPort(), false);
+        // WeChatSocketClient wechatSocketClient = new WeChatSocketClient("10.33.10.6", properties.getSocketPort(), false, properties.getDllPath());
 
         // 是否已登录
         // log.info("isLogin: {}", client.isLogin());
@@ -65,7 +69,7 @@ public class WeChatConfiguration {
         // client.sendFile("C:\\Projs\\WeChatFerry\\README.MD", "filehelper");
 
         String xml =
-            "<?xml version=\"1.0\"?><msg><appmsg appid=\"\" sdkver=\"0\"><title>叮当药房，24小时服务，28分钟送药到家！</title><des>叮当快药首家承诺范围内28分钟送药到家！叮当快药核心区域内7*24小时全天候服务，送药上门！叮当快药官网为您提供快捷便利，正品低价，安全放心的购药、送药服务体验。</des><action>view</action><type>33</type><showtype>0</showtype><content /><url>https://mp.weixin.qq.com/mp/waerrpage?appid=wxc2edadc87077fa2a&amp;type=upgrade&amp;upgradetype=3#wechat_redirect</url><dataurl /><lowurl /><lowdataurl /><recorditem /><thumburl /><messageaction /><md5>7f6f49d301ebf47100199b8a4fcf4de4</md5><extinfo /><sourceusername>gh_c2b88a38c424@app</sourceusername><sourcedisplayname>叮当快药 药店送药到家夜间买药</sourcedisplayname><commenturl /><appattach><totallen>0</totallen><attachid /><emoticonmd5></emoticonmd5><fileext>jpg</fileext><filekey>da0e08f5c7259d03da150d5e7ca6d950</filekey><cdnthumburl>3057020100044b30490201000204e4c0232702032f4ef20204a6bace6f02046401f62d042430326337303430352d333734332d343362652d623335322d6233333566623266376334620204012400030201000405004c537600</cdnthumburl><aeskey>0db26456caf243fbd4efb99058a01d66</aeskey><cdnthumbaeskey>0db26456caf243fbd4efb99058a01d66</cdnthumbaeskey><encryver>1</encryver><cdnthumblength>61558</cdnthumblength><cdnthumbheight>100</cdnthumbheight><cdnthumbwidth>100</cdnthumbwidth></appattach><weappinfo><pagepath>pages/index/index.html</pagepath><username>gh_c2b88a38c424@app</username><appid>wxc2edadc87077fa2a</appid><version>197</version><type>2</type><weappiconurl>http://wx.qlogo.cn/mmhead/Q3auHgzwzM4727n0NQ0ZIPQPlfp15m1WLsnrXbo1kLhFGcolgLyc0A/96</weappiconurl><appservicetype>0</appservicetype><shareId>1_wxc2edadc87077fa2a_29177e9a9b918cb9e75964f80bb8f32e_1677849476_0</shareId></weappinfo><websearch /></appmsg><fromusername>wxid_eob5qfcrv4zd22</fromusername><scene>0</scene><appinfo><version>1</version><appname /></appinfo><commenturl /></msg>";
+                "<?xml version=\"1.0\"?><msg><appmsg appid=\"\" sdkver=\"0\"><title>叮当药房，24小时服务，28分钟送药到家！</title><des>叮当快药首家承诺范围内28分钟送药到家！叮当快药核心区域内7*24小时全天候服务，送药上门！叮当快药官网为您提供快捷便利，正品低价，安全放心的购药、送药服务体验。</des><action>view</action><type>33</type><showtype>0</showtype><content /><url>https://mp.weixin.qq.com/mp/waerrpage?appid=wxc2edadc87077fa2a&amp;type=upgrade&amp;upgradetype=3#wechat_redirect</url><dataurl /><lowurl /><lowdataurl /><recorditem /><thumburl /><messageaction /><md5>7f6f49d301ebf47100199b8a4fcf4de4</md5><extinfo /><sourceusername>gh_c2b88a38c424@app</sourceusername><sourcedisplayname>叮当快药 药店送药到家夜间买药</sourcedisplayname><commenturl /><appattach><totallen>0</totallen><attachid /><emoticonmd5></emoticonmd5><fileext>jpg</fileext><filekey>da0e08f5c7259d03da150d5e7ca6d950</filekey><cdnthumburl>3057020100044b30490201000204e4c0232702032f4ef20204a6bace6f02046401f62d042430326337303430352d333734332d343362652d623335322d6233333566623266376334620204012400030201000405004c537600</cdnthumburl><aeskey>0db26456caf243fbd4efb99058a01d66</aeskey><cdnthumbaeskey>0db26456caf243fbd4efb99058a01d66</cdnthumbaeskey><encryver>1</encryver><cdnthumblength>61558</cdnthumblength><cdnthumbheight>100</cdnthumbheight><cdnthumbwidth>100</cdnthumbwidth></appattach><weappinfo><pagepath>pages/index/index.html</pagepath><username>gh_c2b88a38c424@app</username><appid>wxc2edadc87077fa2a</appid><version>197</version><type>2</type><weappiconurl>http://wx.qlogo.cn/mmhead/Q3auHgzwzM4727n0NQ0ZIPQPlfp15m1WLsnrXbo1kLhFGcolgLyc0A/96</weappiconurl><appservicetype>0</appservicetype><shareId>1_wxc2edadc87077fa2a_29177e9a9b918cb9e75964f80bb8f32e_1677849476_0</shareId></weappinfo><websearch /></appmsg><fromusername>wxid_eob5qfcrv4zd22</fromusername><scene>0</scene><appinfo><version>1</version><appname /></appinfo><commenturl /></msg>";
         // client.sendXml("filehelper", xml, "", 0x21);
 
         // 发送表情消息，gif 必须要存在
@@ -74,6 +78,7 @@ public class WeChatConfiguration {
         // 使用本机打印
         String url = "http://localhost:" + serverProperties.getPort() + "/wechat/msg/receive";
         // 接收消息，并调用 printWxMsg 处理
+        log.info("Message forwarding url: {}", url);
         wechatSocketClient.enableRecvMsg(100);
         Thread thread = new Thread(new Runnable() {
             public void run() {
