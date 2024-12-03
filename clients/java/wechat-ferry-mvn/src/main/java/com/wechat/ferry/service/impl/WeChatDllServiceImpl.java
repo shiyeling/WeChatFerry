@@ -1,59 +1,31 @@
 package com.wechat.ferry.service.impl;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.web.ServerProperties;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.ObjectUtils;
-
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.wechat.ferry.config.WeChatFerryProperties;
+import com.wechat.ferry.entity.db.Constants;
+import com.wechat.ferry.entity.db.ContactHeadImgUrl;
 import com.wechat.ferry.entity.proto.Wcf;
-import com.wechat.ferry.entity.vo.request.WxPpWcfDatabaseSqlReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfDatabaseTableReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfGroupMemberReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfPatOnePatMsgReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfSendEmojiMsgReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfSendFileMsgReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfSendImageMsgReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfSendRichTextMsgReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfSendTextMsgReq;
-import com.wechat.ferry.entity.vo.request.WxPpWcfSendXmlMsgReq;
-import com.wechat.ferry.entity.vo.response.WxPpWcfContactsResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfDatabaseFieldResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfDatabaseRowResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfGroupMemberResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfLoginInfoResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfMsgTypeResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendEmojiMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendFileMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendImageMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendPatOnePatMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendRichTextMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendTextMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendXmlMsgResp;
+import com.wechat.ferry.entity.vo.request.*;
+import com.wechat.ferry.entity.vo.response.*;
 import com.wechat.ferry.enums.SexEnum;
 import com.wechat.ferry.enums.WxContactsTypeEnum;
 import com.wechat.ferry.handle.WeChatSocketClient;
 import com.wechat.ferry.service.WeChatDllService;
 import com.wechat.ferry.utils.HttpClientUtil;
-
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
+
+import javax.annotation.Resource;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 业务实现层-对接原本DLL的接口
@@ -62,13 +34,24 @@ import lombok.extern.slf4j.Slf4j;
  * @date 2024-10-01 15:58
  */
 @Slf4j
-@Service
+//@Service
 public class WeChatDllServiceImpl implements WeChatDllService {
 
     private WeChatSocketClient wechatSocketClient;
 
-//    private WeChatSocketClient wechatSocketClient2;
-    @Resource
+    public WeChatDllServiceImpl() {
+    }
+
+    public WeChatDllServiceImpl(String host, int port) {
+        log.info("按需创建WeChat DLL 服务封装");
+        wechatSocketClient = new WeChatSocketClient(host, port);
+        // FIXME 暂时不支持消息接收转发
+        // FIXME 解决轮询的问题
+        new Thread(() -> wechatSocketClient.keepRunning()).start();
+    }
+
+    //    private WeChatSocketClient wechatSocketClient2;
+//    @Resource
 //    private ServerProperties serverProperties;
 //    @PostConstruct
 //    public void init() {
@@ -101,11 +84,12 @@ public class WeChatDllServiceImpl implements WeChatDllService {
 //        }).start();
 //    }
 
-    @Autowired
-    public void setWechatSocketClient(WeChatSocketClient wechatSocketClient) {
-        this.wechatSocketClient = wechatSocketClient;
-    }
+//    @Autowired
+//    public void setWechatSocketClient(WeChatSocketClient wechatSocketClient) {
+//        this.wechatSocketClient = wechatSocketClient;
+//    }
 
+    @Setter
     @Resource
     private WeChatFerryProperties weChatFerryProperties;
 
@@ -154,9 +138,18 @@ public class WeChatDllServiceImpl implements WeChatDllService {
         return list;
     }
 
+    /**
+     * 从Socket Client的RPC接口查询当前登录的微信账号联系人，
+     * 执行清理，
+     * 并从MicronMsg.db这个库中的下面这个表里面，查询对应的联系人头像
+     *
+     * @return
+     */
     @Override
     public List<WxPpWcfContactsResp> queryContactsList() {
         List<WxPpWcfContactsResp> list = new ArrayList<>();
+        Map<String, ContactHeadImgUrl> contactHeadImgUrlMap = queryContactHeadImgUrl();
+        log.info("Got Head images {} ", contactHeadImgUrlMap.values());
         List<Wcf.RpcContact> rpcContactList = wechatSocketClient.getContacts();
         if (!CollectionUtils.isEmpty(rpcContactList)) {
             for (Wcf.RpcContact rpcContact : rpcContactList) {
@@ -228,9 +221,7 @@ public class WeChatDllServiceImpl implements WeChatDllService {
                         // 微信公众号
                         vo.setType(WxContactsTypeEnum.OFFICIAL_ACCOUNT.getCode());
                         vo.setTypeLabel(WxContactsTypeEnum.OFFICIAL_ACCOUNT.getName());
-                    } else if ("wxid_2876568766325".equals(rpcContact.getWxid()) || "wxid_2965349653612".equals(rpcContact.getWxid())
-                        || "wxid_4302923029011".equals(rpcContact.getWxid()) || "mphelper".equals(rpcContact.getWxid())
-                        || "weixinguanhaozhushou".equals(rpcContact.getWxid())) {
+                    } else if ("wxid_2876568766325".equals(rpcContact.getWxid()) || "wxid_2965349653612".equals(rpcContact.getWxid()) || "wxid_4302923029011".equals(rpcContact.getWxid()) || "mphelper".equals(rpcContact.getWxid()) || "weixinguanhaozhushou".equals(rpcContact.getWxid())) {
                         // 应用宝 yingyongbao wxid_2876568766325
                         // i黑马 iheima wxid_2965349653612
                         // 丁香医生 DingXiangYiSheng wxid_4302923029011
@@ -244,11 +235,35 @@ public class WeChatDllServiceImpl implements WeChatDllService {
                         vo.setTypeLabel(WxContactsTypeEnum.PERSON.getName());
                     }
                 }
+                if (contactHeadImgUrlMap.containsKey(vo.getWeChatUid())) {
+                    vo.setHeadImgUrl(contactHeadImgUrlMap.get(vo.getWeChatUid()).getSmallHeadImgUrl());
+                } else if (contactHeadImgUrlMap.containsKey(vo.getWeChatNo())) {
+                    vo.setHeadImgUrl(contactHeadImgUrlMap.get(vo.getWeChatNo()).getSmallHeadImgUrl());
+                } else {
+                    log.info("微信联系人 {} ({}:{}) 没有头像URL数据", vo.getWeChatNickname(), vo.getWeChatNo(), vo.getWeChatUid());
+                }
                 list.add(vo);
             }
         }
         log.info("[查询]-[联系人]-共查到:{}条", list.size());
         return list;
+    }
+
+    private Map<String, ContactHeadImgUrl> queryContactHeadImgUrl() {
+        Map<String, ContactHeadImgUrl> results = new HashMap<>();
+        String sql = String.format("SELECT * from %s", Constants.CONTACT_HEAD_IMG_TABLE);
+        List<Wcf.DbRow> wcfList = wechatSocketClient.querySql(Constants.MICRO_MSG_DB, sql);
+        if (!CollectionUtils.isEmpty(wcfList)) {
+            return wcfList.stream().map(ContactHeadImgUrl::new).filter(
+                    ContactHeadImgUrl::checkFields
+            ).collect(Collectors.toMap(
+                    ContactHeadImgUrl::getUsrName,
+                    Function.identity()
+            ));
+        } else {
+            log.warn("联系人头像表查询未获得数据");
+        }
+        return new HashMap<>();
     }
 
     @Override
@@ -274,10 +289,11 @@ public class WeChatDllServiceImpl implements WeChatDllService {
                 WxPpWcfDatabaseRowResp rowVo = new WxPpWcfDatabaseRowResp();
                 List<WxPpWcfDatabaseFieldResp> fieldVoList = new ArrayList<>();
                 for (Wcf.DbField dbField : dbRow.getFieldsList()) {
+                    log.info("Converting {} type column {}, with value {}", dbField.getType(), dbField.getColumn(), dbField.getContent());
                     WxPpWcfDatabaseFieldResp fieldVo = new WxPpWcfDatabaseFieldResp();
                     fieldVo.setType(String.valueOf(dbField.getType()));
                     fieldVo.setColumn(dbField.getColumn());
-                    String value = (String)converterSqlVal(dbField.getType(), dbField.getContent());
+                    Object value = Constants.converterSqlVal(dbField.getType(), dbField.getContent());
                     fieldVo.setValue(value);
                     fieldVoList.add(fieldVo);
                 }
@@ -297,12 +313,12 @@ public class WeChatDllServiceImpl implements WeChatDllService {
     }
 
     @Override
-    public List<String> queryDatabaseTable(WxPpWcfDatabaseTableReq request) {
+    public Map<String, String> queryDatabaseTable(WxPpWcfDatabaseTableReq request) {
         log.info("[查询]-[查询表]-request:{}", request);
         Map<String, String> wcfMap = wechatSocketClient.getDbTables(request.getDatabaseName());
 
         log.info("[查询]-[查询表]-查到:{}", wcfMap);
-        return Collections.emptyList();
+        return wcfMap;
     }
 
     @Override
@@ -311,8 +327,7 @@ public class WeChatDllServiceImpl implements WeChatDllService {
         // 查询群成员
         List<Wcf.DbRow> wcfList = new ArrayList<>();
         if (!ObjectUtils.isEmpty(request.getGroupNo())) {
-            wcfList =
-                wechatSocketClient.querySql("MicroMsg.db", "SELECT RoomData FROM ChatRoom WHERE ChatRoomName = '" + request.getGroupNo() + "';");
+            wcfList = wechatSocketClient.querySql("MicroMsg.db", "SELECT RoomData FROM ChatRoom WHERE ChatRoomName = '" + request.getGroupNo() + "';");
         }
         // 查询联系人
         List<Wcf.DbRow> dbList = wechatSocketClient.querySql("MicroMsg.db", "SELECT UserName, NickName, Type FROM Contact;");
@@ -325,11 +340,11 @@ public class WeChatDllServiceImpl implements WeChatDllService {
                     for (Wcf.DbField dbField : dbFieldList) {
                         if ("UserName".equals(dbField.getColumn())) {
                             vo = new WxPpWcfGroupMemberResp();
-                            String content = (String)converterSqlVal(dbField.getType(), dbField.getContent());
+                            String content = (String) Constants.converterSqlVal(dbField.getType(), dbField.getContent());
                             vo.setWeChatUid(content);
                         }
                         if ("NickName".equals(dbField.getColumn())) {
-                            String content = (String)converterSqlVal(dbField.getType(), dbField.getContent());
+                            String content = (String) Constants.converterSqlVal(dbField.getType(), dbField.getContent());
                             vo.setGroupNickName(content);
                             dbMap.put(vo.getWeChatUid(), vo.getGroupNickName());
                         }
@@ -428,9 +443,7 @@ public class WeChatDllServiceImpl implements WeChatDllService {
 
     @Override
     public WxPpWcfSendRichTextMsgResp sendRichTextMsg(WxPpWcfSendRichTextMsgReq request) {
-        Wcf.RichText richTextMsg = Wcf.RichText.newBuilder().setName(request.getName()).setAccount(request.getAccount()).setTitle(request.getTitle())
-            .setDigest(request.getDigest()).setUrl(request.getJumpUrl()).setThumburl(request.getThumbnailUrl()).setReceiver(request.getRecipient())
-            .build();
+        Wcf.RichText richTextMsg = Wcf.RichText.newBuilder().setName(request.getName()).setAccount(request.getAccount()).setTitle(request.getTitle()).setDigest(request.getDigest()).setUrl(request.getJumpUrl()).setThumburl(request.getThumbnailUrl()).setReceiver(request.getRecipient()).build();
         Wcf.Request wcfReq = Wcf.Request.newBuilder().setFuncValue(Wcf.Functions.FUNC_SEND_RICH_TXT_VALUE).setRt(richTextMsg).build();
         Wcf.Response rsp = wechatSocketClient.sendCmd(wcfReq);
         return null;
@@ -444,27 +457,6 @@ public class WeChatDllServiceImpl implements WeChatDllService {
         return null;
     }
 
-    public Function<byte[], Object> getSqlType(int type) {
-        Map<Integer, Function<byte[], Object>> sqlTypeMap = new HashMap<>();
-        // 初始化SQL_TYPES 根据类型执行不同的Func
-        sqlTypeMap.put(1, bytes -> ByteBuffer.wrap(bytes).getInt());
-        sqlTypeMap.put(2, bytes -> ByteBuffer.wrap(bytes).getFloat());
-        sqlTypeMap.put(3, bytes -> new String(bytes, StandardCharsets.UTF_8));
-        sqlTypeMap.put(4, bytes -> bytes);
-        sqlTypeMap.put(5, bytes -> null);
-        return sqlTypeMap.get(type);
-    }
-
-    public Object converterSqlVal(int type, ByteString content) {
-        // 根据每一列的类型转换
-        Function<byte[], Object> converter = getSqlType(type);
-        if (converter != null) {
-            return converter.apply(content.toByteArray());
-        } else {
-            log.warn("未知的SQL类型: {}", type);
-            return content.toByteArray();
-        }
-    }
 
     /**
      * 转换艾特用户
@@ -472,7 +464,6 @@ public class WeChatDllServiceImpl implements WeChatDllService {
      * @param groupNo 群组编号
      * @param atUsers 艾特的用户(名称/微信编号)
      * @return 组装后的艾特用户
-     *
      * @author chandler
      * @date 2024-10-03 11:35
      */

@@ -1,6 +1,7 @@
 package com.wechat.ferry.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.wechat.ferry.entity.vo.request.WxPpWcfDatabaseSqlReq;
 import com.wechat.ferry.entity.vo.request.WxPpWcfDatabaseTableReq;
@@ -113,7 +114,7 @@ public interface WeChatDllService {
      * @author chandler
      * @date 2024-10-02 17:52
      */
-    List<String> queryDatabaseTable(WxPpWcfDatabaseTableReq request);
+    Map<String, String> queryDatabaseTable(WxPpWcfDatabaseTableReq request);
 
     /**
      * 查询群成员

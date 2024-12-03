@@ -26,7 +26,7 @@ public class WeChatConfiguration {
     @Resource
     private ServerProperties serverProperties;
 
-    @Bean
+//    @Bean
     public WeChatSocketClient weChatSocketClient() {
         log.info("[读取配置文件]-端口：{}，DLL：{}", properties.getSocketPort(), properties.getDllPath());
         // 连接远程 RPC
@@ -36,7 +36,7 @@ public class WeChatConfiguration {
         // WeChatSocketClient wechatSocketClient = new WeChatSocketClient(properties.getSocketPort(), properties.getDllPath());
 
         // 使用远程的RPC
-        WeChatSocketClient wechatSocketClient = new WeChatSocketClient("10.10.1.22", properties.getSocketPort(), false);
+        WeChatSocketClient wechatSocketClient = new WeChatSocketClient("10.10.1.22", properties.getSocketPort());
         // WeChatSocketClient wechatSocketClient = new WeChatSocketClient("10.33.10.6", properties.getSocketPort(), false, properties.getDllPath());
 
         // 是否已登录

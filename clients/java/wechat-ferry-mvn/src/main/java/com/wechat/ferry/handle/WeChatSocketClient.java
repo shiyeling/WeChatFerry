@@ -83,7 +83,8 @@ public class WeChatSocketClient {
     /**
      * 加载Hook的动态库，执行初始化后，
      * 新建一个监听本地服务器上指定端口的Socket 客户端
-     * @param port 指定端口
+     *
+     * @param port    指定端口
      * @param dllPath 动态库路径
      */
     public WeChatSocketClient(Integer port, String dllPath) {
@@ -92,11 +93,11 @@ public class WeChatSocketClient {
 
     /**
      * 新建一个监听指定服务器上指定端口的Socket 客户端，不涉及动态DLL库的处理
+     *
      * @param host 主机地址或域名
      * @param port 指定端口
-     * @param debug 调试模式开关
      */
-    public WeChatSocketClient(String host, Integer port, boolean debug) {
+    public WeChatSocketClient(String host, Integer port) {
         this.host = host;
         this.port = port;
         connectRPC(String.format(CMD_URL, host, port), false);
@@ -108,8 +109,9 @@ public class WeChatSocketClient {
     /**
      * 加载Hook的动态库，执行初始化后
      * 新建一个监听指定服务器上指定端口的Socket 客户端
-     * @param host 主机地址或域名
-     * @param port 指定端口
+     *
+     * @param host  主机地址或域名
+     * @param port  指定端口
      * @param debug 调试模式开关
      */
     public WeChatSocketClient(String host, Integer port, boolean debug, String dllPath) {
@@ -141,12 +143,16 @@ public class WeChatSocketClient {
                     log.info("Login backoff 1000ms");
                     waitMs(1000);
                 }
+            } else {
+                log.info("Socket 客户端将不验证登陆情况");
             }
             boolean login = isLogin();
             log.info("RPC connection successful, target WCF Wechat is {} logged in!", login ? "" : "NOT ");
         } catch (Exception e) {
-            log.error("连接 RPC 失败: ", e);
-            System.exit(-1);
+            log.error("连接 RPC 失败: {}", e.getMessage(), e);
+            if (e.getMessage().equalsIgnoreCase("Connection refused")) {
+                throw new RuntimeException("连接被拒绝，请检查端口和防火墙", e);
+            }
         }
         log.info("监听进程销毁事件并禁用消息接收");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

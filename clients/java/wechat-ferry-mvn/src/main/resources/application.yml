@@ -38,12 +38,12 @@ wechat:
     receive-msg-fwd-switch: false
     # 接收消息转发URL
     receive-msg-fwd-urls:
-      - http://localhost:9001/msg
+      - http://localhost:9201/msg
     # 发送消息转发标识 1-关闭 2-全转发 3-发送成功才转发
     send-msg-fwd-flag: '1'
     # 发送消息转发URL
     send-msg-fwd-urls:
-      - http://localhost:9001/msg
+      - http://localhost:9201/msg
     # 调用第三方服务客户端成功状态码
     third-party-ok-codes:
       # key:状态码字段 val:状态码值

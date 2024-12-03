@@ -99,4 +99,6 @@ public class WxPpWcfContactsResp {
     @ApiModelProperty(value = "类型-翻译")
     private String typeLabel;
 
+    private String headImgUrl;
+
 }

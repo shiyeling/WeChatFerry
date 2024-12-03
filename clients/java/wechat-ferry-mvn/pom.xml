@@ -198,4 +198,19 @@
         </plugins>
     </build>
 
-</project>
+    <scm>
+        <developerConnection>scm:git:git@github.com:shiyeling/WeChatFerry.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <name>Releases</name>
+            <url>http://10.33.10.61:8081/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus</id>
+            <name>Snapshot</name>
+            <url>http://10.33.10.61:8081/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement></project>
