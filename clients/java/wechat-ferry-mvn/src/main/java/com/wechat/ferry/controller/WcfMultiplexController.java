@@ -1,6 +1,5 @@
 package com.wechat.ferry.controller;
 
-import com.wechat.ferry.controller.dto.RemoteWcfBotLocatorInfo;
 import com.wechat.ferry.entity.RemoteWcfBotLocator;
 import com.wechat.ferry.entity.TResponse;
 import com.wechat.ferry.entity.vo.request.*;
@@ -21,7 +20,7 @@ import java.util.Map;
 /**
  * 控制层-Java封装的微信机器人的HTTP API接口
  *
- * @author chandler
+ * @author shiyeling@gmail.com
  * @date 2024-10-01 15:48
  */
 @Slf4j
@@ -256,5 +255,4 @@ public class WcfMultiplexController {
     // public TResponse<Object> queryMsgTypeList() {
     // return TResponse.ok(ResponseCodeEnum.SUCCESS, list);
     // }
-
 }

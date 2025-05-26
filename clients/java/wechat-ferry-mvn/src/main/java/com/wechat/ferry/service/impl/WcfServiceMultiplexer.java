@@ -27,6 +27,7 @@ public class WcfServiceMultiplexer {
 
     public WeChatDllService getService(RemoteWcfBotLocator locator) {
         String botUri = locator.getUri();
+        log.info("Accessing bot : {}", botUri);
         if (!wcfRobots.containsKey(botUri)) {
             try {
                 WeChatDllServiceImpl weChatDllService = new WeChatDllServiceImpl(locator.getHost(), locator.getWcfCmdPort());
