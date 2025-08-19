@@ -3,7 +3,7 @@
 // main.cpp
 #include <windows.h>
 #include <iostream>
-#include "spy.h" // 包含 InitSpy 的声明
+#include "sdk.h"
 #include "util.h"
 
 #include "framework.h"
@@ -33,10 +33,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // TODO: 在此处放置代码。
 
     util::PortPath pp;
-    pp.port = 5555; // 你希望的端口
+    pp.port = 5555;
+    strcpy_s(pp.path, sizeof(pp.path), "D:\\logs\\spy.log");
 
     // 调用 spy.dll 的初始化接口
-    int ret = Spy::Init(&pp);
+    int ret = WxInitSDK(false, pp.port);
     if (ret == 0) {
         std::cout << "Spy 初始化成功！" << std::endl;
     }

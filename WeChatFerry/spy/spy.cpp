@@ -4,7 +4,7 @@
 
 #include "log.hpp"
 #include "rpc_server.h"
-#include "spy.h"
+//#include "spy.h"
 #include "util.h"
 
 namespace Spy
