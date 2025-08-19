@@ -1,13 +1,11 @@
 package com.wechat.ferry.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.wechat.ferry.entity.TResponse;
 import com.wechat.ferry.entity.vo.request.WxPpWcfAddFriendGroupMemberReq;
@@ -53,8 +51,8 @@ import lombok.extern.slf4j.Slf4j;
  * @date 2024-10-01 15:48
  */
 @Slf4j
-@RestController
-@RequestMapping("/wechat/cgi/wcf")
+//@RestController
+//@RequestMapping("/wechat/cgi/wcf")
 @Api(tags = "微信消息处理-接口")
 public class WeChatDllController {
 
@@ -109,6 +107,7 @@ public class WeChatDllController {
 
     @ApiOperation(value = "获取指定数据库中的表列表", notes = "queryDbTableList")
     @PostMapping(value = "/list/dbTable")
+
     public TResponse<List<WxPpWcfDatabaseTableResp>> queryDbTableList(@Validated @RequestBody WxPpWcfDatabaseTableReq request) {
         List<WxPpWcfDatabaseTableResp> list = weChatDllService.queryDbTableList(request);
         return TResponse.ok(ResponseCodeEnum.SUCCESS, list);

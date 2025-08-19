@@ -1,6 +1,7 @@
 package com.wechat.ferry.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.wechat.ferry.entity.vo.request.WxPpWcfAddFriendGroupMemberReq;
 import com.wechat.ferry.entity.vo.request.WxPpWcfDatabaseSqlReq;
@@ -44,7 +45,7 @@ public interface WeChatDllService {
      * 当前微信客户端是否登录微信号
      *
      * @return true-已登录 false-未登录
-     * 
+     *
      * @author chandler
      * @date 2024-10-01 21:20
      */
@@ -114,10 +115,10 @@ public interface WeChatDllService {
 
     /**
      * 执行数据库查询SQL
-     * 
+     *
      * @param request 请求入参
      * @return 数据库记录
-     * 
+     *
      * @author chandler
      * @date 2024-10-02 17:52
      */

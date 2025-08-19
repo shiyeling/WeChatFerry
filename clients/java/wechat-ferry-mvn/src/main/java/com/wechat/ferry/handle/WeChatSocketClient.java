@@ -77,34 +77,93 @@ public class WeChatSocketClient {
     private final String host;
     private final Integer port;
 
+    /**
+     * 加载Hook的动态库，执行初始化后，
+     * 新建一个监听本地服务器上指定端口的Socket 客户端
+     *
+     * @param port    指定端口
+     * @param dllPath 动态库路径
+     */
     public WeChatSocketClient(Integer port, String dllPath) {
         this(DEFAULT_HOST, port, false, dllPath);
     }
 
+    /**
+     * 新建一个监听指定服务器上指定端口的Socket 客户端，不涉及动态DLL库的处理
+     *
+     * @param host 主机地址或域名
+     * @param port 指定端口
+     */
+    public WeChatSocketClient(String host, Integer port) {
+        this.host = host;
+        this.port = port;
+        connectRPC(String.format(CMD_URL, host, port), false);
+        if (DEFAULT_HOST.equals(host) || "localhost".equalsIgnoreCase(host)) {
+            isLocalHostPort = true;
+        }
+    }
+
+    /**
+     * 加载Hook的动态库，执行初始化后
+     * 新建一个监听指定服务器上指定端口的Socket 客户端
+     *
+     * @param host  主机地址或域名
+     * @param port  指定端口
+     * @param debug 调试模式开关
+     */
     public WeChatSocketClient(String host, Integer port, boolean debug, String dllPath) {
         this.host = host;
         this.port = port;
 
         SDK INSTANCE = Native.load(dllPath, SDK.class);
+        log.error("执行SDK初始化");
         int status = INSTANCE.WxInitSDK(debug, port);
         if (status != 0) {
-            log.error("启动 RPC 失败: {}", status);
+            log.error("SDK初始化失败: {}", status);
             System.exit(-1);
+        } else {
+            log.error("SDK初始化完成");
         }
-        connectRPC(String.format(CMD_URL, host, port), INSTANCE);
+        connectRPC(String.format(CMD_URL, host, port), true);
         if (DEFAULT_HOST.equals(host) || "localhost".equalsIgnoreCase(host)) {
             isLocalHostPort = true;
         }
+    }
+
+    public void connectRPC(String url, boolean waitForLogin) {
+        try {
+            cmdSocket = new Pair1Socket();
+            cmdSocket.dial(url);
+            if (waitForLogin) {
+                while (!isLogin()) {
+                    // 直到登录成功
+                    log.info("Login backoff 1000ms");
+                    waitMs(1000);
+                }
+            } else {
+                log.info("Socket 客户端将不验证登陆情况");
+            }
+            boolean login = isLogin();
+            log.info("RPC connection successful, target WCF Wechat is {} logged in!", login ? "" : "NOT ");
+        } catch (Exception e) {
+            log.error("连接 RPC 失败: {}", e.getMessage(), e);
+            if (e.getMessage().equalsIgnoreCase("Connection refused")) {
+                throw new RuntimeException("连接被拒绝，请检查端口和防火墙", e);
+            }
+        }
+        log.info("监听进程销毁事件并禁用消息接收");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("关闭...");
+            diableRecvMsg();
+        }));
     }
 
     public void connectRPC(String url, SDK INSTANCE) {
         try {
             cmdSocket = new Pair1Socket();
             cmdSocket.dial(url);
-            while (!isLogin()) {
-                // 直到登录成功
-                waitMs(1000);
-            }
+            boolean login = isLogin();
+            log.info("RPC connection successful, target WCF Wechat is {} logged in!", login ? "" : "NOT ");
         } catch (Exception e) {
             log.error("连接 RPC 失败: ", e);
             System.exit(-1);
@@ -118,6 +177,7 @@ public class WeChatSocketClient {
         }));
     }
 
+
     public Response sendCmd(Request req) {
         try {
             // 设置超时时间 20s
@@ -126,7 +186,7 @@ public class WeChatSocketClient {
             cmdSocket.send(bb);
             ByteBuffer ret = ByteBuffer.allocate(BUFFER_SIZE);
             long size = cmdSocket.receive(ret, true);
-            return Response.parseFrom(Arrays.copyOfRange(ret.array(), 0, (int)size));
+            return Response.parseFrom(Arrays.copyOfRange(ret.array(), 0, (int) size));
         } catch (Exception e) {
             if ("Timed out".equals(e.getMessage())) {
                 log.error("请求超时: ", e);
@@ -203,7 +263,7 @@ public class WeChatSocketClient {
     /**
      * 判断是否是艾特自己的消息
      *
-     * @param wxMsgXml XML消息
+     * @param wxMsgXml     XML消息
      * @param wxMsgContent 消息内容
      * @param selfWxId 自己的微信id
      * @return 是否
@@ -231,7 +291,7 @@ public class WeChatSocketClient {
         while (isReceivingMsg) {
             try {
                 long size = msgSocket.receive(bb, true);
-                WxMsg wxMsg = Response.parseFrom(Arrays.copyOfRange(bb.array(), 0, (int)size)).getWxmsg();
+                WxMsg wxMsg = Response.parseFrom(Arrays.copyOfRange(bb.array(), 0, (int) size)).getWxmsg();
                 msgQ.put(wxMsg);
             } catch (Exception e) {
                 // 多半是超时，忽略吧

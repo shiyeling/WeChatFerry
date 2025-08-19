@@ -20,15 +20,15 @@ import com.wechat.ferry.handle.WeChatSocketClient;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
+//@Component
 public class ContactGroupMonitorTask {
 
     private WeChatSocketClient wechatSocketClient;
 
-    @Autowired
-    public void setWechatSocketClient(WeChatSocketClient wechatSocketClient) {
-        this.wechatSocketClient = wechatSocketClient;
-    }
+//    @Autowired
+//    public void setWechatSocketClient(WeChatSocketClient wechatSocketClient) {
+//        this.wechatSocketClient = wechatSocketClient;
+//    }
 
     @Resource
     private WeChatFerryProperties weChatFerryProperties;
