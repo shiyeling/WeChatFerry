@@ -8,6 +8,7 @@ import com.wechat.ferry.enums.ResponseCodeEnum;
 
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
@@ -17,6 +18,7 @@ import lombok.experimental.Accessors;
 @Data
 @ToString
 @Accessors(chain = true)
+@NoArgsConstructor
 public class TResponse<T> {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

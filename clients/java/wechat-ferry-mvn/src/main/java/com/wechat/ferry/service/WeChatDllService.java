@@ -19,19 +19,7 @@ import com.wechat.ferry.entity.vo.request.WxPpWcfSendImageMsgReq;
 import com.wechat.ferry.entity.vo.request.WxPpWcfSendRichTextMsgReq;
 import com.wechat.ferry.entity.vo.request.WxPpWcfSendTextMsgReq;
 import com.wechat.ferry.entity.vo.request.WxPpWcfSendXmlMsgReq;
-import com.wechat.ferry.entity.vo.response.WxPpWcfContactsResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfDatabaseRowResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfDatabaseTableResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfGroupMemberResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfLoginInfoResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfMsgTypeResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendEmojiMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendFileMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendImageMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendPatOnePatMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendRichTextMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendTextMsgResp;
-import com.wechat.ferry.entity.vo.response.WxPpWcfSendXmlMsgResp;
+import com.wechat.ferry.entity.vo.response.*;
 
 /**
  * 业务接口-对接原本DLL的接口
@@ -45,7 +33,6 @@ public interface WeChatDllService {
      * 当前微信客户端是否登录微信号
      *
      * @return true-已登录 false-未登录
-     *
      * @author chandler
      * @date 2024-10-01 21:20
      */
@@ -56,17 +43,24 @@ public interface WeChatDllService {
      * 获得微信客户端登录的微信ID
      *
      * @return 微信内部识别号UID
-     *
      * @author chandler
      * @date 2024-10-01 21:22
      */
     String queryLoginWeChatUid();
 
     /**
+     * 获取微信登录的二维码
+     *
+     * @return 微信内部识别号UID
+     * @author chandler
+     * @date 2025-08-29 16:22
+     */
+    WxPpWcfQrCodeResp queryLoginQrCode();
+
+    /**
      * 获取登录微信信息
      *
      * @return 当前登录微信信息
-     *
      * @author chandler
      * @date 2024-10-05 22:54
      */
@@ -76,7 +70,6 @@ public interface WeChatDllService {
      * 获取消息类型列表
      *
      * @return 消息类型列表
-     *
      * @author chandler
      * @date 2024-10-01 21:22
      */
@@ -86,7 +79,6 @@ public interface WeChatDllService {
      * 获取联系人列表
      *
      * @return 联系人列表
-     *
      * @author chandler
      * @date 2024-10-02 16:59
      */
@@ -96,7 +88,6 @@ public interface WeChatDllService {
      * 获取数据库表名称列表
      *
      * @return 数据库名称列表
-     *
      * @author chandler
      * @date 2024-10-02 17:53
      */
@@ -107,7 +98,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 数据库记录
-     *
      * @author chandler
      * @date 2024-10-02 17:52
      */
@@ -118,7 +108,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 数据库记录
-     *
      * @author chandler
      * @date 2024-10-02 17:52
      */
@@ -129,9 +118,7 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
-     * @example sendText(" Hello @ 某人1 @ 某人2 ", " xxxxxxxx @ chatroom ", "wxid_xxxxxxxxxxxxx1,wxid_xxxxxxxxxxxxx2");
-     *
+     * @example sendText(" Hello @ 某人1 @ 某人2 ", " xxxxxxxx @ chatroom ", " wxid_xxxxxxxxxxxxx1, wxid_xxxxxxxxxxxxx2 ");
      * @author chandler
      * @date 2024-10-02 20:40
      */
@@ -142,7 +129,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
      * @author chandler
      * @date 2024-10-06 15:48
      */
@@ -153,7 +139,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
      * @author chandler
      * @date 2024-10-04 23:15
      */
@@ -164,7 +149,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
      * @author chandler
      * @date 2024-10-04 23:06
      */
@@ -175,7 +159,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
      * @author chandler
      * @date 2024-10-04 23:29
      */
@@ -186,7 +169,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
      * @author chandler
      * @date 2024-10-04 23:15
      */
@@ -197,7 +179,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 消息发送返回
-     *
      * @author chandler
      * @date 2024-10-06 15:54
      */
@@ -207,7 +188,6 @@ public interface WeChatDllService {
      * 撤回消息
      *
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 11:59
      */
@@ -218,7 +198,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 09:38
      */
@@ -229,7 +208,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 09:38
      */
@@ -240,7 +218,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 数据库记录
-     *
      * @author chandler
      * @date 2024-10-02 20:59
      */
@@ -251,7 +228,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 10:02
      */
@@ -262,7 +238,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 10:03
      */
@@ -272,7 +247,6 @@ public interface WeChatDllService {
      * 查询朋友圈
      *
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 11:11
      */
@@ -283,7 +257,6 @@ public interface WeChatDllService {
      *
      * @param request 请求入参
      * @return 结果状态
-     *
      * @author chandler
      * @date 2024-12-25 13:48
      */

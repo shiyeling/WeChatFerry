@@ -1,19 +1,5 @@
 package com.wechat.ferry.service.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Resource;
-
-import com.wechat.ferry.enums.DatabaseNameEnum;
-import com.wechat.ferry.enums.MsgCallbackTypeEnum;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.ObjectUtils;
-
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -24,6 +10,8 @@ import com.wechat.ferry.entity.db.ContactHeadImgUrl;
 import com.wechat.ferry.entity.proto.Wcf;
 import com.wechat.ferry.entity.vo.request.*;
 import com.wechat.ferry.entity.vo.response.*;
+import com.wechat.ferry.enums.DatabaseNameEnum;
+import com.wechat.ferry.enums.MsgCallbackTypeEnum;
 import com.wechat.ferry.enums.SexEnum;
 import com.wechat.ferry.enums.WxContactsTypeEnum;
 import com.wechat.ferry.exception.BizException;
@@ -32,13 +20,15 @@ import com.wechat.ferry.service.WeChatDllService;
 import com.wechat.ferry.utils.HttpClientUtil;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.Resource;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -114,7 +104,7 @@ public class WeChatDllServiceImpl implements WeChatDllService {
     public Boolean loginStatus() {
         long startTime = System.currentTimeMillis();
         // 公共校验
-        checkClientStatus();
+//        checkClientStatus();
         Boolean status = wechatSocketClient.isLogin();
         long endTime = System.currentTimeMillis();
         log.info("[查询]-[登录状态]-耗时：{}ms，status:{}", (endTime - startTime), status);
@@ -125,7 +115,7 @@ public class WeChatDllServiceImpl implements WeChatDllService {
     public String queryLoginWeChatUid() {
         long startTime = System.currentTimeMillis();
         // 公共校验
-        checkClientStatus();
+//        checkClientStatus();
         String weChatUid = "";
         Wcf.Request req = Wcf.Request.newBuilder().setFuncValue(Wcf.Functions.FUNC_GET_SELF_WXID_VALUE).build();
         Wcf.Response rsp = wechatSocketClient.sendCmd(req);
@@ -138,10 +128,36 @@ public class WeChatDllServiceImpl implements WeChatDllService {
     }
 
     @Override
+    public WxPpWcfQrCodeResp queryLoginQrCode() {
+        long startTime = System.currentTimeMillis();
+        Boolean b = this.loginStatus();
+        if (b) {
+            // 已登录
+            return new WxPpWcfQrCodeResp("", "已登录");
+        }
+        log.info("机器人未登录");
+        WxPpWcfLoginInfoResp wxPpWcfLoginInfoResp = this.queryLoginWeChatInfo();
+        if (StringUtils.isNoneBlank(wxPpWcfLoginInfoResp.getWeChatNickname())) {
+            return new WxPpWcfQrCodeResp("", "需手动登录");
+        }
+        log.info("机器人应处于二维码界面");
+
+        String loginQrCodeUrl = "";
+        Wcf.Request req = Wcf.Request.newBuilder().setFuncValue(Wcf.Functions.FUNC_REFRESH_QRCODE_VALUE).build();
+        Wcf.Response rsp = wechatSocketClient.sendCmd(req);
+        if (!ObjectUtils.isEmpty(rsp)) {
+            loginQrCodeUrl = rsp.getStr();
+        }
+        long endTime = System.currentTimeMillis();
+        log.info("[查询]-[登录二维码地址]-耗时：{}ms， weChatUid:{}", (endTime - startTime), loginQrCodeUrl);
+        return new WxPpWcfQrCodeResp(loginQrCodeUrl, "");
+    }
+
+    @Override
     public WxPpWcfLoginInfoResp queryLoginWeChatInfo() {
         long startTime = System.currentTimeMillis();
         // 公共校验
-        checkClientStatus();
+//        checkClientStatus();
         WxPpWcfLoginInfoResp resp = new WxPpWcfLoginInfoResp();
         Wcf.Request req = Wcf.Request.newBuilder().setFuncValue(Wcf.Functions.FUNC_GET_USER_INFO_VALUE).build();
         Wcf.Response rsp = wechatSocketClient.sendCmd(req);
@@ -189,6 +205,8 @@ public class WeChatDllServiceImpl implements WeChatDllService {
      */
     @Override
     public List<WxPpWcfContactsResp> queryContactsList() {
+        Map<String, ContactHeadImgUrl> contactHeadImgUrlMap = queryContactHeadImgUrl();
+        log.info("Got Head images {} ", contactHeadImgUrlMap.values());
         long startTime = System.currentTimeMillis();
         // 公共校验
         checkClientStatus();
@@ -226,7 +244,15 @@ public class WeChatDllServiceImpl implements WeChatDllService {
                 if (!ObjectUtils.isEmpty(rpcContact.getWxid())) {
                     String type = ContactDo.convertContactType(rpcContact.getWxid(), weChatFerryProperties);
                     vo.setType(type);
-                    vo.setTypeLabel(WxContactsTypeEnum.getCodeMap(rpcContact.getWxid()).getName());
+                    vo.setTypeLabel(WxContactsTypeEnum.getCodeMap(type).getName());
+                }
+                // 处理头像图标
+                if (contactHeadImgUrlMap.containsKey(vo.getWeChatUid())) {
+                    vo.setHeadImgUrl(contactHeadImgUrlMap.get(vo.getWeChatUid()).getSmallHeadImgUrl());
+                } else if (contactHeadImgUrlMap.containsKey(vo.getWeChatNo())) {
+                    vo.setHeadImgUrl(contactHeadImgUrlMap.get(vo.getWeChatNo()).getSmallHeadImgUrl());
+                } else {
+                    log.info("微信联系人 {} ({}:{}) 找不到对应的头像图标", vo.getWeChatNickname(), vo.getWeChatNo(), vo.getWeChatUid());
                 }
                 list.add(vo);
             }
@@ -258,10 +284,10 @@ public class WeChatDllServiceImpl implements WeChatDllService {
         List<Wcf.DbRow> wcfList = wechatSocketClient.querySql(Constants.MICRO_MSG_DB, sql);
         if (!CollectionUtils.isEmpty(wcfList)) {
             return wcfList.stream().map(ContactHeadImgUrl::new).filter(
-                    ContactHeadImgUrl::checkFields
+                ContactHeadImgUrl::checkFields
             ).collect(Collectors.toMap(
-                    ContactHeadImgUrl::getUsrName,
-                    Function.identity()
+                ContactHeadImgUrl::getUsrName,
+                Function.identity()
             ));
         } else {
             log.warn("联系人头像表查询未获得数据");
@@ -558,11 +584,11 @@ public class WeChatDllServiceImpl implements WeChatDllService {
                     for (Wcf.DbField dbField : dbFieldList) {
                         if ("UserName".equals(dbField.getColumn())) {
                             vo = new WxPpWcfGroupMemberResp();
-                            String content = (String)converterSqlVal(dbField.getType(), dbField.getContent());
+                            String content = (String) converterSqlVal(dbField.getType(), dbField.getContent());
                             vo.setWeChatUid(content);
                         }
                         if ("NickName".equals(dbField.getColumn())) {
-                            String content = (String)converterSqlVal(dbField.getType(), dbField.getContent());
+                            String content = (String) converterSqlVal(dbField.getType(), dbField.getContent());
                             vo.setGroupNickName(content);
                             dbMap.put(vo.getWeChatUid(), vo.getGroupNickName());
                         }
@@ -686,8 +712,7 @@ public class WeChatDllServiceImpl implements WeChatDllService {
      * 消息回调
      *
      * @param jsonString json数据
-     * @param state cmd调用状态
-     *
+     * @param state      cmd调用状态
      * @author chandler
      * @date 2024-10-10 23:10
      */
@@ -722,7 +747,6 @@ public class WeChatDllServiceImpl implements WeChatDllService {
      *
      * @param responseStr 响应参数
      * @return 状态
-     *
      * @author chandler
      * @date 2024-10-10 00:10
      */
@@ -750,7 +774,6 @@ public class WeChatDllServiceImpl implements WeChatDllService {
      *
      * @param rsp 响应参数
      * @return 状态
-     *
      * @author chandler
      * @date 2024-12-23 21:53
      */
@@ -768,7 +791,6 @@ public class WeChatDllServiceImpl implements WeChatDllService {
      *
      * @param list 配置参数
      * @return map key:code val:name
-     *
      * @author chandler
      * @date 2024-12-24 16:55
      */

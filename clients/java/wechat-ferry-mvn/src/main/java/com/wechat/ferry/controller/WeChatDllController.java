@@ -70,6 +70,14 @@ public class WeChatDllController {
         return TResponse.ok(ResponseCodeEnum.SUCCESS, status);
     }
 
+    @ApiOperation(value = "获取登录二维码", notes = "queryLoginQrCode")
+    @PostMapping(value = "/loginQrCode")
+    public TResponse<String> queryLoginQrCode() {
+        // 方法目前不可用
+        String weChatUid = weChatDllService.queryLoginWeChatUid();
+        return TResponse.ok(ResponseCodeEnum.SUCCESS, weChatUid);
+    }
+
     @ApiOperation(value = "获取登录微信内部识别号UID", notes = "queryLoginWeChatUid")
     @PostMapping(value = "/loginWeChatUid")
     public TResponse<Object> queryLoginWeChatUid() {
