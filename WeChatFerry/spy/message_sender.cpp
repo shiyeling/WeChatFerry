@@ -250,6 +250,7 @@ int Sender::forward(QWORD msgid, const std::string &receiver)
 // RPC 方法
 bool Sender::rpc_send_text(const TextMsg &text, uint8_t *out, size_t *len)
 {
+    LOG_INFO("Sending text to {}: {}", text.receiver, text.msg);
     return fill_response<Functions_FUNC_SEND_TXT>(out, len, [&](Response &rsp) {
         if (text.msg == nullptr || text.receiver == nullptr || strlen(text.msg) == 0 || strlen(text.receiver) == 0) {
             LOG_ERROR("Empty message or receiver.");
@@ -265,6 +266,7 @@ bool Sender::rpc_send_image(const PathMsg &file, uint8_t *out, size_t *len)
 {
     std::string path(file.path);
     std::string receiver(file.receiver);
+    LOG_INFO("Sending image to {}: {}", receiver, path);
     return fill_response<Functions_FUNC_SEND_IMG>(out, len, [&](Response &rsp) {
         if (path.empty() || receiver.empty()) {
             LOG_ERROR("Empty path or receiver.");

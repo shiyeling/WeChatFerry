@@ -6,6 +6,8 @@
 
 #include "util.h"
 
+#include <tlhelp32.h>
+
 using namespace std;
 
 static void handle_injection_error(HANDLE process, LPVOID remote_address, const std::string &error_msg)
@@ -39,6 +41,45 @@ HMODULE get_target_module_base(HANDLE process, const string &dll)
     return NULL;
 }
 
+// 辅助函数：宽字符转窄字符
+std::string wstring_to_string(const std::wstring& wstr)
+{
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string str(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &str[0], size_needed, NULL, NULL);
+    return str;
+}
+
+bool is_dll_loaded(DWORD pid, const std::string& dll_name)
+{
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
+    if (hSnapshot == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    MODULEENTRY32 me32;
+    me32.dwSize = sizeof(MODULEENTRY32);
+
+    bool is_loaded = false;
+    std::string target_dll = dll_name;
+    std::transform(target_dll.begin(), target_dll.end(), target_dll.begin(), ::tolower);
+
+    if (Module32First(hSnapshot, &me32)) {
+        do {
+            std::string current_dll = wstring_to_string(me32.szModule);
+            std::transform(current_dll.begin(), current_dll.end(), current_dll.begin(), ::tolower);
+
+            if (current_dll.find(target_dll) != std::string::npos) {
+                is_loaded = true;
+                break;
+            }
+        } while (Module32Next(hSnapshot, &me32));
+    }
+
+    CloseHandle(hSnapshot);
+    return is_loaded;
+}
+
 HANDLE inject_dll(DWORD pid, const string &dll_path, HMODULE *injected_base)
 {
     SIZE_T path_size = dll_path.size() + 1;
@@ -48,6 +89,16 @@ HANDLE inject_dll(DWORD pid, const string &dll_path, HMODULE *injected_base)
     if (!hProcess) {
         util::MsgBox(NULL, "打开进程失败", "inject_dll", 0);
         return NULL;
+    }
+
+    // 检查DLL是否已经加载
+    string dll_name = filesystem::path(dll_path).filename().string();
+    if (is_dll_loaded(pid, dll_name)) {
+        util::MsgBox(NULL, "DLL已加载", "inject_dll", 0);
+        // 或者使用: if (is_dll_loaded_psapi(hProcess, dll_name))
+        *injected_base = get_target_module_base(hProcess, dll_name);
+        // CloseHandle(hProcess);
+        return hProcess; // 或者返回特殊值表示已加载
     }
 
     // 2. 在目标进程的内存里开辟空间
@@ -63,26 +114,30 @@ HANDLE inject_dll(DWORD pid, const string &dll_path, HMODULE *injected_base)
     // 4. 创建一个远程线程，让目标进程调用 LoadLibrary
     HMODULE k32 = GetModuleHandleA("kernel32.dll");
     if (!k32) {
-        handle_injection_error(hProcess, pRemoteAddress, "获取 kernel32 失败");
+        DWORD error = GetLastError();
+        string msg = "获取 kernel32 失败 失败，错误代码: " + to_string(error);
+        handle_injection_error(hProcess, pRemoteAddress, msg);
         return NULL;
     }
 
     FARPROC libAddr = GetProcAddress(k32, "LoadLibraryA");
     if (!libAddr) {
-        handle_injection_error(hProcess, pRemoteAddress, "获取 LoadLibrary 失败");
+        DWORD error = GetLastError();
+        handle_injection_error(hProcess, pRemoteAddress, "获取 LoadLibrary 失败，错误代码: " + to_string(error));
         return NULL;
     }
 
     HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)libAddr, pRemoteAddress, 0, NULL);
     if (!hThread) {
-        handle_injection_error(hProcess, pRemoteAddress, "CreateRemoteThread 失败");
+        DWORD error = GetLastError();
+        handle_injection_error(hProcess, pRemoteAddress, "CreateRemoteThread 失败，错误代码: " + to_string(error));
         return NULL;
     }
 
     WaitForSingleObject(hThread, INFINITE);
     CloseHandle(hThread);
 
-    *injected_base = get_target_module_base(hProcess, filesystem::path(dll_path).filename().string());
+    *injected_base = get_target_module_base(hProcess, dll_name);
 
     VirtualFreeEx(hProcess, pRemoteAddress, 0, MEM_RELEASE);
     return hProcess;

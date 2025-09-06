@@ -332,6 +332,7 @@ int revoke_message(uint64_t id)
 
 std::string get_login_url()
 {
+    LOG_INFO("获取登录二维码");
     std::string uri;
     auto get_qr_code_mgr = Spy::getFunction<get_qr_code_mgr_t>(OsMisc::QR_CODE);
 
@@ -347,6 +348,7 @@ std::string get_login_url()
     } else {
         uri = std::string(*(char **)(addr), len);
     }
+    LOG_ERROR("获取二维码成功: {}", uri);
 
     return "http://weixin.qq.com/x/" + uri;
 }

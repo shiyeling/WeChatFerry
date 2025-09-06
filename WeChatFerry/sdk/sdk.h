@@ -3,4 +3,5 @@
 extern "C" {
 __declspec(dllexport) int WxInitSDK(bool debug, int port);
 __declspec(dllexport) int WxDestroySDK();
+__declspec(dllexport) const char* GetScreenshot();
 }

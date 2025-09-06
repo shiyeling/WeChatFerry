@@ -14,6 +14,31 @@
 #include "injector.h"
 #include "util.h"
 
+// Windows头文件
+#include <windows.h>
+#include <commctrl.h>
+#include <objbase.h>
+
+// C++标准库
+#include <string>
+#include <vector>
+#include <iostream>
+#include <filesystem>
+
+// GDI+头文件
+#include <gdiplus.h>
+using namespace Gdiplus;
+
+// 其他Windows库
+#pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "shlwapi.lib")
+
+using namespace Gdiplus;
+using namespace std;
+
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 static bool injected    = false;
@@ -34,6 +59,33 @@ constexpr char WCFSPYDLL_DEBUG[] = "libspyd.dll";
 
 constexpr std::string_view DISCLAIMER_FLAG      = ".license_accepted.flag";
 constexpr std::string_view DISCLAIMER_TEXT_FILE = "DISCLAIMER.md";
+
+
+// 定义返回结构体
+struct ScreenshotResult
+{
+    BOOL success;           // 是否成功
+    WCHAR filePath[MAX_PATH]; // 图片文件路径
+    INT width;              // 图片宽度
+    INT height;             // 图片高度
+};
+
+
+// 前向声明
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam);
+BOOL TakeWindowScreenshot(HWND hWnd, const WCHAR* filename, ScreenshotResult* result);
+BOOL IsMainWindow(HWND hWnd);
+BOOL GetWindowPID(HWND hWnd, DWORD* pid);
+
+// 存储进程ID和结果的结构
+struct EnumData
+{
+    DWORD pid;
+    ScreenshotResult* results;
+    int count;
+    int maxCount;
+};
+
 
 namespace fs = std::filesystem;
 
@@ -98,15 +150,158 @@ static std::string get_dll_path(bool debug)
 
     return path.string();
 }
-extern "C" {
-__declspec(dllexport) int WxInitSDK(bool debug, int port)
+
+
+
+// 检查窗口是否属于指定进程
+BOOL GetWindowPID(HWND hWnd, DWORD* pid)
 {
+    return GetWindowThreadProcessId(hWnd, pid);
+}
+
+// 检查窗口是否是主窗口
+BOOL IsMainWindow(HWND hWnd)
+{
+    return GetWindow(hWnd, GW_OWNER) == (HWND)0 && IsWindowVisible(hWnd);
+}
+
+// 枚举窗口的回调函数
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+    EnumData* data = (EnumData*)lParam;
+    DWORD windowPid = 0;
+
+    if (IsMainWindow(hwnd) && GetWindowPID(hwnd, &windowPid) && windowPid == data->pid)
+    {
+        if (data->count < data->maxCount)
+        {
+            // 生成临时文件名
+            WCHAR tempPath[MAX_PATH];
+            WCHAR fileName[MAX_PATH];
+
+            GetTempPathW(MAX_PATH, tempPath);
+            _snwprintf_s(fileName, MAX_PATH, _TRUNCATE, L"%sscreenshot_%d_%p.bmp",
+                         tempPath, data->pid, hwnd);
+
+            // 截取窗口截图
+            if (TakeWindowScreenshot(hwnd, fileName, &data->results[data->count]))
+            {
+                data->count++;
+            }
+        }
+    }
+    return TRUE;
+}
+
+// 截取指定窗口的截图
+BOOL TakeWindowScreenshot(HWND hWnd, const WCHAR* filename, ScreenshotResult* result)
+{
+    // 检查窗口是否最小化
+    if (IsIconic(hWnd))
+    {
+        return FALSE;
+    }
+
+    RECT windowRect;
+    GetClientRect(hWnd, &windowRect);
+
+    int width = windowRect.right - windowRect.left;
+    int height = windowRect.bottom - windowRect.top;
+
+    if (width == 0 || height == 0)
+    {
+        return FALSE;
+    }
+
+    HDC hdcScreen = GetDC(NULL);
+    HDC hdc = CreateCompatibleDC(hdcScreen);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdcScreen, width, height);
+    SelectObject(hdc, hBitmap);
+
+    // 打印窗口
+    PrintWindow(hWnd, hdc, PW_CLIENTONLY);
+
+    // 使用GDI+保存为BMP
+    Bitmap* bitmap = Bitmap::FromHBITMAP(hBitmap, NULL);
+
+    CLSID bmpClsid;
+    CLSIDFromString(L"{557CF400-1A04-11D3-9A73-0000F81EF32E}", &bmpClsid);
+
+    Status status = bitmap->Save(filename, &bmpClsid, NULL);
+
+    delete bitmap;
+    DeleteObject(hBitmap);
+    DeleteDC(hdc);
+    ReleaseDC(NULL, hdcScreen);
+
+    if (status == Ok)
+    {
+        // 填充结果结构
+        result->success = TRUE;
+        wcscpy_s(result->filePath, MAX_PATH, filename);
+        result->width = width;
+        result->height = height;
+        return TRUE;
+    }
+    else
+    {
+        // 删除失败的文件
+        DeleteFileW(filename);
+        return FALSE;
+    }
+}
+
+int GetProcessScreenshots(DWORD pid, ScreenshotResult** results)
+{
+    // 分配初始内存
+    int maxResults = 10;
+    *results = (ScreenshotResult*)CoTaskMemAlloc(maxResults * sizeof(ScreenshotResult));
+
+    if (*results == NULL)
+    {
+        return 0;
+    }
+
+    // 初始化结果数组
+    for (int i = 0; i < maxResults; i++)
+    {
+        (*results)[i].success = FALSE;
+        (*results)[i].filePath[0] = L'\0';
+        (*results)[i].width = 0;
+        (*results)[i].height = 0;
+    }
+
+    // 枚举窗口数据
+    EnumData data;
+    data.pid = pid;
+    data.results = *results;
+    data.count = 0;
+    data.maxCount = maxResults;
+
+    // 枚举所有窗口
+    EnumWindows(EnumWindowsProc, (LPARAM)&data);
+
+    return data.count;
+}
+
+void FreeScreenshotResults(ScreenshotResult* results)
+{
+    if (results)
+    {
+        CoTaskMemFree(results);
+    }
+}
+
+// 记录一个全局的当前微信ID
+DWORD wcPid = 0;
+
+extern "C" {
+__declspec(dllexport) int WxInitSDK(bool debug, int port) {
     if (!show_disclaimer()) {
         exit(-1); // 用户拒绝协议，退出程序
     }
 
     int status  = 0;
-    DWORD wcPid = 0;
 
     spyDllPath = get_dll_path(debug);
     if (spyDllPath.empty()) {
@@ -157,5 +352,37 @@ __declspec(dllexport) int WxDestroySDK()
     injected = false;
 
     return 0;
+}
+
+__declspec(dllexport) const char* GetScreenshot()
+{
+ // 使用示例：获取记事本进程的截图
+
+    ScreenshotResult* results = NULL;
+    int count = GetProcessScreenshots(wcPid, &results);
+    std::wstring path;
+
+    if (count > 0)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (results[i].success)
+            {
+                path = results[i].filePath;
+                std::wstring logMessage = L"截图成功: " + std::wstring(results[i].filePath) +
+                         L" (" + std::to_wstring(results[i].width) +
+                         L"x" + std::to_wstring(results[i].height) + L")\n";
+                util::MsgBox(NULL, util::w2s(logMessage), "GetProcessScreenshot", 0);
+            }
+        }
+
+        // 释放内存
+        FreeScreenshotResults(results);
+    }
+    else
+    {
+        printf("未找到该进程的窗口或截图失败\n");
+    }
+    return path.empty() ? "" : util::w2s(path).c_str();
 }
 }

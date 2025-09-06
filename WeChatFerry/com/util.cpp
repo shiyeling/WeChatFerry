@@ -22,6 +22,7 @@ namespace util
 
 constexpr char WECHATEXE[]    = "WeChat.exe";
 constexpr char WECHATWINDLL[] = "WeChatWin.dll";
+bool isdebug = false;
 
 std::wstring s2w(const std::string &s)
 {
@@ -182,6 +183,7 @@ int open_wechat(DWORD &pid)
 {
     pid = get_wechat_pid();
     if (pid != 0) {
+        LOG_INFO("微信已在运行，PID: {}", pid);
         return ERROR_SUCCESS;
     }
 
@@ -306,5 +308,16 @@ void FreeWxString(WxString *wxStr)
         if (wxStr->wptr) HeapFree(GetProcessHeap(), 8, const_cast<wchar_t *>(wxStr->wptr));
         HeapFree(GetProcessHeap(), 8, wxStr);
     }
+}
+
+int MsgBox(HWND hWnd, const std::string &text, const std::string &caption = "WCF", UINT uType = MB_OK)
+{
+    std::wstring wText    = s2w(text);
+    std::wstring wCaption = s2w(caption);
+    LOG_WARN("{} - {}", caption, text), 0; // 模拟返回OK
+    if(isdebug) {
+        return MessageBoxW(nullptr, wText.c_str(), wCaption.c_str(), uType);
+    }
+    return 0;
 }
 } // namespace util

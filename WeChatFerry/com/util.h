@@ -70,12 +70,7 @@ inline void FreeBuffer(void *buffer)
 {
     if (buffer) HeapFree(GetProcessHeap(), 8, buffer);
 }
-inline int MsgBox(HWND hWnd, const std::string &text, const std::string &caption = "WCF", UINT uType = MB_OK)
-{
-    std::wstring wText    = s2w(text);
-    std::wstring wCaption = s2w(caption);
-    return MessageBoxW(nullptr, wText.c_str(), wCaption.c_str(), uType);
-}
+int MsgBox(HWND hWnd, const std::string &text, const std::string &caption, UINT uType);
 
 template <typename T> static T *AllocBuffer(size_t count)
 {
@@ -101,5 +96,4 @@ std::unique_ptr<WxString> new_wx_string(const char *str);
 std::unique_ptr<WxString> new_wx_string(const wchar_t *wstr);
 std::unique_ptr<WxString> new_wx_string(const std::string &str);
 std::unique_ptr<WxString> new_wx_string(const std::wstring &wstr);
-
 } // namespace util
