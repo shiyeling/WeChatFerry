@@ -49,8 +49,8 @@ public class WcfMultiplexControllerV2 {
     @PostMapping(value = "/botStatus")
     public TResponse<Boolean> botRunningStatus(@PathVariable String token) {
         try {
-            WeChatDllService weChatDllService = serviceMultiplexer.getService(token);
-            return TResponse.ok(ResponseCodeEnum.SUCCESS, weChatDllService != null);
+//            WeChatDllService weChatDllService = serviceMultiplexer.getService(token);
+            return TResponse.ok(ResponseCodeEnum.SUCCESS, serviceMultiplexer.isBotOnline(token));
         } catch (Exception e) {
             log.error("查询登录状态出错：{}", e.getMessage(), e);
             return TResponse.fail(e.getMessage());

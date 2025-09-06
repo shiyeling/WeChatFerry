@@ -18,6 +18,7 @@ import com.wechat.ferry.exception.BizException;
 import com.wechat.ferry.handle.WeChatSocketClient;
 import com.wechat.ferry.service.WeChatDllService;
 import com.wechat.ferry.utils.HttpClientUtil;
+import io.sisu.nng.NngException;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -55,6 +56,11 @@ public class WeChatDllServiceImpl implements WeChatDllService {
         // FIXME 暂时不支持消息接收转发
         // FIXME 解决轮询的问题
         new Thread(() -> wechatSocketClient.keepRunning()).start();
+    }
+
+    @Override
+    public boolean isConnectionStale() {
+        return wechatSocketClient == null || wechatSocketClient.isConnectionStale();
     }
 
     //    private WeChatSocketClient wechatSocketClient2;
@@ -824,4 +830,12 @@ public class WeChatDllServiceImpl implements WeChatDllService {
         }
     }
 
+    @Override
+    public void retire() {
+        try {
+            wechatSocketClient.shutdown();
+        } catch (NngException e) {
+            log.error("Exception when shuting down socket client {} ",e.getMessage(), e);
+        }
+    }
 }

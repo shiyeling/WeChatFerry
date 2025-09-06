@@ -1,5 +1,21 @@
 package com.wechat.ferry.handle;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.google.protobuf.ByteString;
+import com.sun.jna.Native;
+import com.wechat.ferry.entity.dto.WxPpMsgDTO;
+import com.wechat.ferry.entity.proto.Wcf.*;
+import com.wechat.ferry.exception.BizException;
+import com.wechat.ferry.service.SDK;
+import com.wechat.ferry.utils.HttpClientUtil;
+import com.wechat.ferry.utils.XmlJsonConvertUtil;
+import io.sisu.nng.NngException;
+import io.sisu.nng.Socket;
+import io.sisu.nng.pair.Pair1Socket;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.ObjectUtils;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -9,28 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
-
-import org.springframework.util.ObjectUtils;
-
-import com.alibaba.fastjson2.JSONObject;
-import com.google.protobuf.ByteString;
-import com.sun.jna.Native;
-import com.wechat.ferry.entity.dto.WxPpMsgDTO;
-import com.wechat.ferry.entity.proto.Wcf.DbQuery;
-import com.wechat.ferry.entity.proto.Wcf.DbRow;
-import com.wechat.ferry.entity.proto.Wcf.DecPath;
-import com.wechat.ferry.entity.proto.Wcf.Functions;
-import com.wechat.ferry.entity.proto.Wcf.Request;
-import com.wechat.ferry.entity.proto.Wcf.Response;
-import com.wechat.ferry.entity.proto.Wcf.WxMsg;
-import com.wechat.ferry.exception.BizException;
-import com.wechat.ferry.service.SDK;
-import com.wechat.ferry.utils.HttpClientUtil;
-import com.wechat.ferry.utils.XmlJsonConvertUtil;
-
-import io.sisu.nng.Socket;
-import io.sisu.nng.pair.Pair1Socket;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 处理层-微信客户端
@@ -177,6 +171,8 @@ public class WeChatSocketClient {
         }));
     }
 
+    @Getter
+    private boolean connectionStale = false;
 
     public Response sendCmd(Request req) {
         try {
@@ -190,6 +186,7 @@ public class WeChatSocketClient {
         } catch (Exception e) {
             if ("Timed out".equals(e.getMessage())) {
                 log.error("请求超时: ", e);
+                connectionStale = true;
                 throw new BizException("请求超时:1.接口耗时太长，2.服务与客户端失去联系，请重启本服务！详细异常信息：" + e.getMessage());
             } else {
                 log.error("命令调用失败: ", e);
@@ -215,7 +212,7 @@ public class WeChatSocketClient {
     /**
      * 获取sql执行结果
      *
-     * @param db 数据库名
+     * @param db  数据库名
      * @param sql 执行的sql语句
      * @return 数据记录列表
      */
@@ -265,7 +262,7 @@ public class WeChatSocketClient {
      *
      * @param wxMsgXml     XML消息
      * @param wxMsgContent 消息内容
-     * @param selfWxId 自己的微信id
+     * @param selfWxId     自己的微信id
      * @return 是否
      */
     public boolean isAtMeMsg(String wxMsgXml, String wxMsgContent, String selfWxId) {
@@ -387,7 +384,6 @@ public class WeChatSocketClient {
      *
      * @param msg 消息内容
      * @param url 回调地址
-     *
      * @author chandler
      * @date 2024-10-05 12:50
      */
@@ -451,7 +447,6 @@ public class WeChatSocketClient {
      *
      * @param type 转换类型
      * @return 函数
-     *
      * @author chandler
      * @date 2024-10-05 12:54
      */
@@ -469,9 +464,8 @@ public class WeChatSocketClient {
     /**
      * SQL转换类型
      *
-     * @param type 转换类型
+     * @param type    转换类型
      * @param content 待转换内容
-     *
      * @author chandler
      * @date 2024-10-05 12:54
      */
@@ -484,6 +478,11 @@ public class WeChatSocketClient {
             log.warn("[SQL转换类型]-未知的SQL类型: {}", type);
             return content.toByteArray();
         }
+    }
+
+    public void shutdown() throws NngException {
+        this.cmdSocket.close();
+        this.msgSocket.close();
     }
 
 }

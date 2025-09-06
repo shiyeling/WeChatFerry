@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wechat.ferry.config.WeChatFerryProperties;
 import com.wechat.ferry.entity.RemoteWcfBotLocator;
 import com.wechat.ferry.entity.TResponse;
+import com.wechat.ferry.exception.BizException;
 import com.wechat.ferry.service.WeChatDllService;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -43,7 +44,7 @@ public class WcfServiceMultiplexerV2 {
 
     private final Map<String, RemoteWcfBotLocator> registeredBots = new HashMap<>();
 
-    private final Map<String, WeChatDllService> wcfRobots = new HashMap<>();
+    private final Map<String, WeChatDllService> wcfRobotClients = new HashMap<>();
 
     public WcfServiceMultiplexerV2() {
         // 初始化 WebClient，可以设置基础URL或默认头等
@@ -62,19 +63,34 @@ public class WcfServiceMultiplexerV2 {
             RemoteWcfBotLocator locator = registeredBots.get(token);
             String botUri = locator.getUri();
             log.info("Accessing bot : {} with token {} ", botUri, token);
-            if (!wcfRobots.containsKey(botUri)) {
-                try {
-                    WeChatDllServiceImpl weChatDllService = new WeChatDllServiceImpl(locator.getHost(), locator.getWcfCmdPort());
-                    weChatDllService.setWeChatFerryProperties(weChatFerryProperties);
-                    wcfRobots.put(botUri, weChatDllService);
-                } catch (Exception e) {
-                    log.error("无法创建到机器人{}:{}的链接，{}", locator.getHost(), locator.getWcfCmdPort(), e.getMessage(), e);
-                    throw e;
+            if (!wcfRobotClients.containsKey(botUri)) {
+                createRobotClient(locator);
+            } else {
+                if (wcfRobotClients.get(locator.getUri()).isConnectionStale()) {
+                    createRobotClient(locator);
                 }
             }
-            return wcfRobots.get(locator.getUri());
+            return wcfRobotClients.get(locator.getUri());
         } else {
-            return null;
+            throw new BizException("机器人不在线");
+        }
+    }
+
+    private void createRobotClient(RemoteWcfBotLocator locator) {
+        try {
+            WeChatDllServiceImpl weChatDllService = new WeChatDllServiceImpl(locator.getHost(), locator.getWcfCmdPort());
+            weChatDllService.setWeChatFerryProperties(weChatFerryProperties);
+            wcfRobotClients.put(locator.getUri(), weChatDllService);
+        } catch (Exception e) {
+            log.error("无法创建到机器人{}:{}的链接，{}", locator.getHost(), locator.getWcfCmdPort(), e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private void retireRobotClient(RemoteWcfBotLocator locator) {
+        WeChatDllService weChatDllService = wcfRobotClients.get(locator.getUri());
+        if (weChatDllService != null) {
+            weChatDllService.retire();
         }
     }
 
@@ -83,11 +99,19 @@ public class WcfServiceMultiplexerV2 {
     }
 
     public void registerBotLocation(String token, String host, int cmdPort, int helperPort) {
+        if (isBotOnline(token)) {
+            retireRobotClient(registeredBots.get(token));
+        }
         this.registeredBots.put(token, new RemoteWcfBotLocator(host, cmdPort, helperPort));
     }
 
     public void deregisterBotLocation(String token) {
-        this.registeredBots.remove(token);
+        if (isBotOnline(token)) {
+            retireRobotClient(registeredBots.get(token));
+            this.registeredBots.remove(token);
+        } else {
+            log.warn("Not bot registered with token {} ", token);
+        }
     }
 
     public String uploadToBot(String token) {
@@ -98,8 +122,10 @@ public class WcfServiceMultiplexerV2 {
         }
         return null;
     }
+
     private static final ObjectMapper objectMapper = new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     /**
      * 使用 InputStream 直接流式上传
      */
@@ -169,7 +195,7 @@ public class WcfServiceMultiplexerV2 {
             headers.setContentType(org.springframework.http.MediaType.valueOf(contentType));
 
             // 尝试从URL提取文件名
-            String filename = "qrcode_"+botToken+".bmp";
+            String filename = "qrcode_" + botToken + ".bmp";
             headers.setContentDispositionFormData("attachment", filename);
             return new ResponseEntity<>(response.body().byteStream(), headers, HttpStatus.OK);
         } catch (IOException e) {

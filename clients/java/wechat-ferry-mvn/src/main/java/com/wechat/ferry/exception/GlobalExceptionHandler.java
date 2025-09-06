@@ -38,23 +38,23 @@ public class GlobalExceptionHandler {
     public TResponse<Object> handleException(Exception e) {
         log.error("全局异常信息 ex={}", e.getMessage(), e);
         // 打印堆栈信息
-        e.printStackTrace();
+//        e.printStackTrace();
         String message = ResponseCodeEnum.FAILED.getMsg() + "：" + e.getMessage();
         return new TResponse<>(ResponseCodeEnum.FAILED, message);
     }
 
     /**
      * 参数异常
-     * 
+     *
+     * @param request 请求入参
+     * @param e       异常消息
+     * @return TResponse 返回体
      * @author chandler
      * @date 2023/4/3 23:26
-     * @param request 请求入参
-     * @param e 异常消息
-     * @return TResponse 返回体
      */
     @ExceptionHandler(value = {MethodArgumentNotValidException.class})
     public TResponse<Object> handleValidationException(HttpServletRequest request, MethodArgumentNotValidException e) {
-        log.error("[请求体参数校验不通过]", e);
+        log.error("[请求体参数校验不通过]:{}", e.getMessage(), e);
         String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         return new TResponse<>(ResponseCodeEnum.PARAM_ERROR, message);
     }
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BizException.class)
     public TResponse<Object> handleBizException(BizException e) {
         // 打印错误
-        e.printStackTrace();
+        log.error("[业务处理异常]:{}", e.getMessage(), e);
         // 获取错误码
         String message = MessageFormat.format(e.getMessage(), e.getArg());
         return new TResponse<>(ResponseCodeEnum.FAILED, message);

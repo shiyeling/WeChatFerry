@@ -29,6 +29,8 @@ import com.wechat.ferry.entity.vo.response.*;
  */
 public interface WeChatDllService {
 
+    boolean isConnectionStale();
+
     /**
      * 当前微信客户端是否登录微信号
      *
@@ -262,4 +264,5 @@ public interface WeChatDllService {
      */
     String receiveTransfer(WxPpWcfReceiveTransferReq request);
 
+    void retire();
 }
