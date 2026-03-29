@@ -9,7 +9,7 @@
 #include "framework.h"
 #include "WcfGui.h"
 
-#define MAX_LOADSTRING 100
+#define MAX_LOADSTRING 1000
 
 // 全局变量:
 HINSTANCE hInst;                                // 当前实例

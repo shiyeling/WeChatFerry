@@ -29,5 +29,4 @@ public class WebConfig implements WebMvcConfigurer {
             .addResourceLocations("classpath:/templates/");
         WebMvcConfigurer.super.addResourceHandlers(registry);
     }
-
 }

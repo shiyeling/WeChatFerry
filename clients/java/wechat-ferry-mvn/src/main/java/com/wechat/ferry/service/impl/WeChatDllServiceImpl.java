@@ -834,8 +834,8 @@ public class WeChatDllServiceImpl implements WeChatDllService {
     public void retire() {
         try {
             wechatSocketClient.shutdown();
-        } catch (NngException e) {
-            log.error("Exception when shuting down socket client {} ",e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Exception when shutting down socket client: {} ",e.getMessage(), e);
         }
     }
 }

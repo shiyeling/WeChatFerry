@@ -29,7 +29,7 @@
 namespace Log
 {
 inline constexpr char DEFAULT_LOGGER_NAME[]      = "WCF";
-inline constexpr char DEFAULT_LOGGER_FILE[]      = "logs/wcf.txt";
+inline constexpr char DEFAULT_LOGGER_FILE[]      = "logs/wcf.log";
 inline constexpr size_t DEFAULT_LOGGER_MAX_SIZE  = 1024 * 1024 * 10; // 10MB
 inline constexpr size_t DEFAULT_LOGGER_MAX_FILES = 10;
 

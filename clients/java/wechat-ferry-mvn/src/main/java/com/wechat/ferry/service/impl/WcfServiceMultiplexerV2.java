@@ -24,9 +24,12 @@ import reactor.netty.http.client.HttpClient;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -92,6 +95,7 @@ public class WcfServiceMultiplexerV2 {
         if (weChatDllService != null) {
             weChatDllService.retire();
         }
+        wcfRobotClients.remove(locator.getUri());
     }
 
     public boolean isBotOnline(String token) {
@@ -100,6 +104,8 @@ public class WcfServiceMultiplexerV2 {
 
     public void registerBotLocation(String token, String host, int cmdPort, int helperPort) {
         if (isBotOnline(token)) {
+            RemoteWcfBotLocator locator = registeredBots.get(token);
+            log.info("Token {} is currently registered at {}", token, locator.getUri());
             retireRobotClient(registeredBots.get(token));
         }
         this.registeredBots.put(token, new RemoteWcfBotLocator(host, cmdPort, helperPort));
@@ -110,7 +116,7 @@ public class WcfServiceMultiplexerV2 {
             retireRobotClient(registeredBots.get(token));
             this.registeredBots.remove(token);
         } else {
-            log.warn("Not bot registered with token {} ", token);
+            log.warn("No bot registered with token {} ", token);
         }
     }
 
@@ -132,22 +138,13 @@ public class WcfServiceMultiplexerV2 {
     public TResponse<String> uploadStream(String token, MultipartFile file) throws IOException {
 
         RemoteWcfBotLocator locator = registeredBots.get(token);
-//        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-//        builder.part("file", new InputStreamResource(inputStream, filename)).filename(filename);
-//
-//        return buildWebClientToBot(locator)
-//            .post()
-//            .uri(locator.getUploadUrl())
-//            .contentType(MediaType.MULTIPART_FORM_DATA)
-//            .body(BodyInserters.fromMultipartData(builder.build()))
-//            .retrieve()
-//            .bodyToMono(String.class);
         OkHttpClient okHttpClient = buildHttpClient();
+        log.info("Uploading file {} size:{}", file.getOriginalFilename(), file.getSize());
         // 创建请求体
         RequestBody requestBody = new MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file",
-                file.getOriginalFilename(),
+                URLEncoder.encode(Objects.requireNonNull(file.getOriginalFilename()), StandardCharsets.UTF_8),
                 createRequestBody(file))
             .build();
 

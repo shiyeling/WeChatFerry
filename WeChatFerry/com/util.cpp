@@ -22,7 +22,7 @@ namespace util
 
 constexpr char WECHATEXE[]    = "WeChat.exe";
 constexpr char WECHATWINDLL[] = "WeChatWin.dll";
-bool isdebug = false;
+bool isdebug = true;
 
 std::wstring s2w(const std::string &s)
 {

@@ -143,13 +143,12 @@ public class WeChatSocketClient {
             log.error("连接 RPC 失败: {}", e.getMessage(), e);
             if (e.getMessage().equalsIgnoreCase("Connection refused")) {
                 throw new RuntimeException("连接被拒绝，请检查端口和防火墙", e);
+            } else {
+                throw new RuntimeException("连接失败，请检查", e);
             }
         }
         log.info("监听进程销毁事件并禁用消息接收");
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("关闭...");
-            diableRecvMsg();
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
     public void connectRPC(String url, SDK INSTANCE) {
@@ -480,9 +479,23 @@ public class WeChatSocketClient {
         }
     }
 
-    public void shutdown() throws NngException {
-        this.cmdSocket.close();
-        this.msgSocket.close();
+    public void shutdown() {
+        log.info("Shutting down socket client {}:{}", this.host, this.port);
+        diableRecvMsg();
+        if (cmdSocket != null) {
+            try {
+                this.cmdSocket.close();
+            } catch (NngException e) {
+                log.warn("Error shutting down cmd socket {} ", e.getMessage(), e);
+            }
+        }
+        if (msgSocket != null) {
+            try {
+                this.msgSocket.close();
+            } catch (NngException e) {
+                log.warn("Error shutting down msg socket {} ", e.getMessage(), e);
+            }
+        }
     }
 
 }

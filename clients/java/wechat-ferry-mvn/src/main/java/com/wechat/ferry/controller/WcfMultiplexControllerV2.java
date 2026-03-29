@@ -39,7 +39,15 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/wechat-ferry/{token}")
 @Api(tags = "微信消息处理-接口")
-@CrossOrigin(originPatterns = "*", allowedHeaders = "*", allowCredentials = "true")
+//@CrossOrigin(originPatterns = "*", allowedHeaders = "*", allowCredentials = "true")
+
+@CrossOrigin(
+    origins = {"http://localhost:5173", "http://127.0.0.1:5173"},      // MUST be explicit when using credentials
+    allowedHeaders = "*",
+    allowCredentials = "true",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS}
+)
+
 public class WcfMultiplexControllerV2 {
 
     @Autowired
@@ -357,28 +365,36 @@ public class WcfMultiplexControllerV2 {
                                             HttpServletRequest request) {
         try {
             String ipAddress = request.getHeader("X-Forwarded-For");
-
+            log.info("IPAddress from header X-Forwarded-For is {}", ipAddress);
             if (isInvalidIp(ipAddress)) {
+                log.info("IPAddress from header X-Forwarded-For is {}, NOT VALID", ipAddress);
                 ipAddress = request.getHeader("Proxy-Client-IP");
             }
             if (isInvalidIp(ipAddress)) {
+                log.info("IPAddress from header Proxy-Client-IP is {}, NOT VALID", ipAddress);
                 ipAddress = request.getHeader("WL-Proxy-Client-IP");
             }
             if (isInvalidIp(ipAddress)) {
+                log.info("IPAddress from header WL-Proxy-Client-IP is {}, NOT VALID", ipAddress);
                 ipAddress = request.getHeader("HTTP_CLIENT_IP");
             }
             if (isInvalidIp(ipAddress)) {
+                log.info("IPAddress from header HTTP_CLIENT_IP is {}, NOT VALID", ipAddress);
                 ipAddress = request.getHeader("HTTP_X_FORWARDED_FOR");
             }
             if (isInvalidIp(ipAddress)) {
+                log.info("IPAddress from header HTTP_X_FORWARDED_FOR is {}, NOT VALID", ipAddress);
                 ipAddress = request.getRemoteAddr();
+                log.info("IPAddress from remote addr is {}", ipAddress);
             }
+
 
             // 处理多个IP的情况（如X-Forwarded-For可能包含代理链）
             if (ipAddress != null && ipAddress.contains(",")) {
+                log.info("Got multiple ip addresses: {}", ipAddress);
                 ipAddress = ipAddress.split(",")[0].trim();
+                log.info("Using first one as  {}", ipAddress);
             }
-
             log.info("Updating bot {} to address {}:{}/{}", token, ipAddress, wcfCmdPort, helperPort);
             serviceMultiplexer.registerBotLocation(token, ipAddress, wcfCmdPort, helperPort);
             return TResponse.ok(ResponseCodeEnum.SUCCESS, true);
